@@ -66,20 +66,18 @@
 </head>
 <body>
 <div class="flex-center position-ref full-height">
-    <div class="content">
+    <div class="content" style="padding-left: 20px; padding-right: 20px;">
         <div class="title m-b-md">
             Results
         </div>
 
-        @if(count($transcriptions) == 0)
+        @if(empty($results) || count($results) == 0)
             <span>No results</span>
         @else
-            @foreach($transcriptions as $transcription)
-                <span>{{$transcription->alternatives()[0]['transcript']. ' (Confidence: '.$transcription->alternatives()[0]['confidence'].')'}}</span><br/>
+            @foreach($results as $result)
+                <p>{{$result->getAlternatives()[0]->getTranscript(). ' (Confidence: '.$result->getAlternatives()[0]->getConfidence().')'}}</p><br>
             @endforeach
         @endif
-
-
     </div>
 </div>
 </body>

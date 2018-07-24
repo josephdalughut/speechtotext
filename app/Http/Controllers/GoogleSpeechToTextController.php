@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers;
 
+ini_set("upload_max_filesize","100M");
+ini_set("post_max_size", "100M");
+ini_set('memory_limit', "1024M");
+
 use App\FileUtils;
 use Google\Cloud\Core\ExponentialBackoff;
-use Google\Cloud\Storage\StorageObject;
-use GuzzleHttp\Client;
+use Google\Cloud\Speech\Operation;
+use Google\Cloud\Speech\V1p1beta1\LongRunningRecognizeResponse;
+use Google\Cloud\Speech\V1p1beta1\RecognitionAudio;
+use Google\Cloud\Speech\V1p1beta1\RecognitionConfig;
+use Google\Cloud\Speech\V1p1beta1\SpeechClient;
+use Google\Cloud\Speech\V1p1beta1\SpeechRecognitionAlternative;
+use Google\Cloud\Speech\V1p1beta1\SpeechRecognitionResult;
 use Illuminate\Http\Request;
-use Google\Cloud\Speech\SpeechClient;
 use Illuminate\Support\Facades\Storage;
-use \RobbieP\CloudConvertLaravel\Facades\CloudConvert;
 include 'rest7.php';
 
 /**
@@ -67,30 +74,35 @@ class GoogleSpeechToTextController extends Controller
             $disk->put($randId, $fileContent);
             $gcsUrl = 'gs://'.env('GOOGLE_CLOUD_STORAGE_BUCKET').'/'.$randId;
 
-            $transcriptionOptions = [
-                'languageCode' => 'en-US',
-                'enableWordTimeOffsets' => false,
-                'enableAutomaticPunctuation' => true,
-                'model' => 'phone_call',
-                'useEnhanced' => true
-            ];
+            // config for recognition
+            $config = new RecognitionConfig();
+            $config->setEnableAutomaticPunctuation(true)
+                ->setUseEnhanced(true)
+                ->setLanguageCode('en-US')
+                ->setModel('video'); //<- video model is more accurate for use case.
+
+            // create recognition audio from google cloud storage url
+            $recognitionAudio = new RecognitionAudio();
+            $recognitionAudio->setUri($gcsUrl);
 
             // begin operation
-            $transcriptionOperation = $speechClient->beginRecognizeOperation($gcsUrl, $transcriptionOptions);
+            $transcriptionOperation = $speechClient
+                ->longRunningRecognize($config, $recognitionAudio);
 
             // wait for operation to complete
             $backoff = new ExponentialBackoff(10);
             $backoff->execute(function () use ($transcriptionOperation) {
                 $transcriptionOperation->reload();
-                if (!$transcriptionOperation->isComplete()) {
-                    throw new \Exception('still working', 500);
+                if (!$transcriptionOperation->isDone()) {
+                    throw new \Exception('still working', 404);
                 }
             });
 
-            // show results.
-            $transcriptions = $transcriptionOperation->isComplete() ? $transcriptionOperation->results() : null;
 
-            return view('results', compact('transcriptions'));
+            // show results.
+            $results =  $transcriptionOperation->isDone() && $transcriptionOperation->operationSucceeded() ?
+                $transcriptionOperation->getResult()->getResults() : null;
+            return view('results', compact('results'));
         }else{
             return view('results');
         }
