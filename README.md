@@ -61,3 +61,12 @@ you can just create it.
 Once you're done with all the setup above, it's time to run your application:
 - run `php artisan serve` to start serving the application.
 - Open your web-browser and navigate to `localhost:8000` to test out the application.
+
+
+## Other
+- This project was a sample to show someone, chances are it won't be maintained.
+- Feel free to fork, download, do anything with it really.
+
+## Alternative API's
+- Checkout [Deepgram](https://deepgram.com/). Their transcriptions seem better than Google's,
+brace yourself however, for crap documentation ლ(ಠ_ಠლ).
